@@ -61,6 +61,7 @@ module nox
   s_lsu_op_t        lsu_op_wb;
   logic             fetch_req;
   pc_t              fetch_addr;
+  logic             trap_flush;  // Signal for trap flush from execute to decode
   s_wb_t            wb_dec;
   logic             lsu_bp_data;
   s_trap_info_t     fetch_trap;
@@ -140,6 +141,8 @@ module nox
     // From EXEC stage
     .fetch_req_i           (fetch_req),
     .fetch_addr_i          (fetch_addr),
+    // Trap flush
+    .trap_flush_i          (trap_flush),
     // To DEC I/F
     .fetch_valid_o         (fetch_valid),
     .fetch_ready_i         (fetch_ready),
@@ -155,6 +158,7 @@ module nox
     .rst                   (rst),
     // Control signals
     .jump_i                (fetch_req),
+    .trap_flush_i          (trap_flush),
     .pc_jump_i             (fetch_addr),
     .pc_reset_i            (start_addr_i),
     // From FETCH stg I/F
@@ -198,6 +202,8 @@ module nox
     // To FETCH stg
     .fetch_req_o           (fetch_req),
     .fetch_addr_o          (fetch_addr),
+    // Flush signal for pipeline when trap occurs
+    .trap_flush_o          (trap_flush),
     // From diff stgs
     .fetch_trap_i          (fetch_trap),
     .lsu_trap_i            (lsu_trap)

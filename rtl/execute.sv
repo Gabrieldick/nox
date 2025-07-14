@@ -35,6 +35,8 @@ module execute
   // To FETCH stg
   output  logic             fetch_req_o,
   output  pc_t              fetch_addr_o,
+  // Flush signal for pipeline when trap occurs
+  output  logic             trap_flush_o,
   // Trap signals
   input   s_trap_info_t     fetch_trap_i,
   input   s_trap_lsu_info_t lsu_trap_i
@@ -56,6 +58,10 @@ module execute
   logic         will_jump_next_clk;
   logic         eval_trap;
   s_trap_info_t instr_addr_misaligned;
+  
+  // IRQ edge detection for flush pulse generation
+  s_irq_t       irq_ff;
+  logic         irq_pulse;
 
   function automatic branch_dec(branch_t op, rdata_t rs1, rdata_t rs2);
     logic         take_branch;
@@ -199,9 +205,18 @@ module execute
   always_comb begin : fetch_req
     fetch_req_o  = '0;
     fetch_addr_o = '0;
+    trap_flush_o = '0;
 
     fetch_req_o  = ((branch_ff.b_act && branch_ff.take_branch) || jump_ff.j_act);
     fetch_addr_o = (branch_ff.b_act) ? branch_ff.b_addr : jump_ff.j_addr;
+
+    // Generate IRQ edge detection for single-cycle flush pulse
+    irq_pulse = (irq_i.ext_irq && ~irq_ff.ext_irq) ||
+                (irq_i.timer_irq && ~irq_ff.timer_irq) ||
+                (irq_i.sw_irq && ~irq_ff.sw_irq);
+
+    // Signal pipeline flush for one cycle when IRQ arrives
+    trap_flush_o = irq_pulse;
 
     if (trap_out.active) begin
       fetch_req_o  = 'b1;
@@ -219,11 +234,13 @@ module execute
       ex_mem_wb_ff <= `OP_RST_L;
       branch_ff    <= s_branch_t'('h0);
       jump_ff      <= s_jump_t'('h0);
+      irq_ff       <= s_irq_t'('h0);
     end
     else begin
       ex_mem_wb_ff <= next_ex_mem_wb;
       branch_ff    <= next_branch;
       jump_ff      <= next_jump;
+      irq_ff       <= irq_i; // Store previous IRQ state for edge detection
     end
   end
 

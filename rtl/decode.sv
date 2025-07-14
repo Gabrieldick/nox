@@ -16,6 +16,7 @@ module decode
   input                 rst,
   // Control signals
   input                 jump_i,
+  input                 trap_flush_i,  // Flush signal from execute when trap occurs
   input   pc_t          pc_reset_i,
   input   pc_t          pc_jump_i,
   // From FETCH stg I/F
@@ -50,8 +51,8 @@ module decode
   end
 
   always_comb begin
-    if (jump_i) begin
-      // ...Insert a NOP
+    if (jump_i || trap_flush_i) begin
+      // ...Insert a NOP (for jumps or trap flush)
       id_ex_o = s_id_ex_t'('0);
       id_ex_o.pc_dec = id_ex_ff.pc_dec;
     end

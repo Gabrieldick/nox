@@ -24,6 +24,8 @@ module fetch
   // From EXEC stg
   input                 fetch_req_i,
   input   pc_t          fetch_addr_i,
+  // Trap flush
+  input                 trap_flush_i,
   // To DEC I/F
   output  valid_t       fetch_valid_o,
   input   ready_t       fetch_ready_i,
@@ -73,7 +75,7 @@ module fetch
 
     data_valid   = instr_cb_miso_i.rd_valid;
     addr_ready   = instr_cb_miso_i.rd_addr_ready;
-    clear_fifo   = (fetch_req_i || (~fetch_start_i));
+    clear_fifo   = (fetch_req_i || (~fetch_start_i) || trap_flush_i);
     valid_addr   = 1'b0;
     next_pc_addr = pc_addr_ff;
     next_pc_buff = pc_buff_ff;
