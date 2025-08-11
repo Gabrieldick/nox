@@ -54,6 +54,7 @@ module csr
   logic   dbg_irq_msoft;
   logic   dbg_irq_mext;
   logic   traps_can_happen_wo_exec;
+  logic   mepc_here_1, mepc_here_2, mepc_here_3, mepc_here_4;
 
   mcause_int_t async_int;
 
@@ -120,6 +121,12 @@ module csr
     csr_wr_args.rs1       = rs1_data_i;
     csr_wr_args.csr_rd    = '0;
     csr_wr_args.mask      = '1;
+
+    
+    mepc_here_1            = 'b0;
+    mepc_here_2            = 'b0;
+    mepc_here_3            = 'b0;
+    mepc_here_4            = 'b0;
 
     case(csr_i.addr)
       RV_CSR_MSTATUS: begin
@@ -226,6 +233,7 @@ module csr
        csr_mie_ff[`RV_MIE_MTIP]): begin
         //next_mip[`RV_MIE_MTIP] = 'b1;
         next_mepc              = pc_addr_i;
+        mepc_here_1            = 'b1;
         next_mcause            = 'h8000_0007;
         next_mtval             = rdata_t'('h0);
         next_trap.active       = 'b1;
@@ -239,6 +247,7 @@ module csr
       end
       (dec_trap_i.active && ~will_jump_i): begin
         next_mepc        = dec_trap_i.pc_addr;
+        mepc_here_2            = 'b1;
         next_mcause      = 'd2;
         next_mtval       = dec_trap_i.mtval;
         next_trap.active = 'b1;
@@ -268,24 +277,28 @@ module csr
       end
       lsu_trap_i.ld_mis.active: begin // TODO: test this feature
         next_mepc        = pc_lsu_i;
+        mepc_here_3            = 'b1;
         next_mcause      = 'd4;
         next_mtval       = pc_lsu_i;
         next_trap.active = 'b1;
       end
       lsu_trap_i.ld.active: begin     // TODO: test this feature
         next_mepc        = pc_lsu_i;
+        mepc_here_3            = 'b1;
         next_mcause      = 'd5;
         next_mtval       = pc_lsu_i;
         next_trap.active = 'b1;
       end
       lsu_trap_i.st_mis.active: begin // TODO: test this feature
         next_mepc        = pc_lsu_i;
+        mepc_here_3            = 'b1;
         next_mcause      = 'd6;
         next_mtval       = pc_lsu_i;
         next_trap.active = 'b1;
       end
       lsu_trap_i.st.active: begin     // TODO: test this feature
         next_mepc        = pc_lsu_i;
+        mepc_here_3            = 'b1;
         next_mcause      = 'd7;
         next_mtval       = pc_lsu_i;
         next_trap.active = 'b1;
@@ -327,7 +340,10 @@ module csr
         default:        trap_offset = 'h0;
       endcase
     end
-
+    if (trap_o.active && (irq_i.sw_irq || irq_i.timer_irq || irq_i.ext_irq) && (~traps_can_happen_wo_exec)) begin
+      next_mepc = pc_addr_i;
+      mepc_here_4            = 'b1;
+    end
     if (next_trap.active && ~mret_i) begin
       // bkp mstatus[MIE]
       //To support nested traps, each privilege mode x has a two-level stack of interrupt-enable bits and privilege modes.
@@ -341,6 +357,7 @@ module csr
         // In this case, ISA says:
         //...If an enabled interrupt is present or later becomes present while the hart is stalled, the interrupt exception
         //will be taken on the following instruction, i.e., execution resumes in the trap handler and mepc = pc + 4.
+        mepc_here_4            = 'b1;
         next_mepc = next_mepc + 'd4;
       end
     end
