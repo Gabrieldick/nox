@@ -29,13 +29,25 @@ module decode
   output  rdata_t       rs1_data_o,
   output  rdata_t       rs2_data_o,
   output  valid_t       id_valid_o,
-  input   ready_t       id_ready_i
+  input   ready_t       id_ready_i,
+  // NEW: pulso indicando que uma escrita no RF foi efetivada neste ciclo
+  output  logic         rf_write_committed_o,
+  // DEBUG: exporta condição de stall (apenas observação)
+  output  logic         stall_should_fire_dbg_o
 );
   valid_t     dec_valid_ff, next_vld_dec;
   s_instr_t   instr_dec;
   logic       wait_inst_ff, next_wait_inst;
   logic       wfi_stop_ff, next_wfi_stop;
   s_id_ex_t   id_ex_ff, next_id_ex;
+  logic stall_should_fire_dbg;
+
+  // DEBUG: indica quando o stall DEVERIA ocorrer (não afeta funcionalmente)
+  always_comb begin : dbg_stall_indicator
+    // Condição: instrução válida prestes a avançar, escreve em RF e ainda não houve commit
+    stall_should_fire_dbg = (id_valid_o && id_ready_i && id_ex_ff.we_rd && ~rf_write_committed_o && ~wfi_stop_ff);
+  end
+  assign stall_should_fire_dbg_o = stall_should_fire_dbg;
 
   always_comb begin
     next_vld_dec  = dec_valid_ff;
@@ -278,7 +290,8 @@ module decode
     .we_i      (wb_dec_i.we_rd),
     .re_i      (id_ready_i),
     .rs1_data_o(rs1_data_o),
-    .rs2_data_o(rs2_data_o)
+  .rs2_data_o(rs2_data_o),
+  .rf_write_committed_o(rf_write_committed_o)
   );
 
   // *SIMULATION ONLY*

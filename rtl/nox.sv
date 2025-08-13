@@ -55,6 +55,7 @@ module nox
   rdata_t           rs2_data;
   valid_t           id_valid;
   ready_t           id_ready;
+  logic             rf_write_committed;
   s_ex_mem_wb_t     ex_mem_wb;
   s_lsu_op_t        lsu_op;
   logic             lsu_bp;
@@ -69,6 +70,9 @@ module nox
   rdata_t           wb_fwd_load;
   logic             lock_wb;
   pc_t              lsu_pc;
+  s_trap_info_t     trap_info;
+  // DEBUG: condição de stall do decode
+  logic             stall_should_fire_dbg;
 
 `ifdef TARGET_FPGA
   reset_sync#(
@@ -169,7 +173,9 @@ module nox
     .rs1_data_o            (rs1_data),
     .rs2_data_o            (rs2_data),
     .id_valid_o            (id_valid),
-    .id_ready_i            (id_ready)
+  .id_ready_i            (id_ready),
+  .rf_write_committed_o  (rf_write_committed),
+  .stall_should_fire_dbg_o(stall_should_fire_dbg)
   );
 
   execute #(
@@ -196,13 +202,17 @@ module nox
     .lsu_bp_i              (lsu_bp),
     .lsu_pc_i              (lsu_pc),
     // IRQs
-    .irq_i                 (irq_i),
+  .irq_i                 (irq_i),
+  .stall_should_fire_dbg_i(stall_should_fire_dbg),
+  .rf_write_committed_i  (rf_write_committed),
     // To FETCH stg
     .fetch_req_o           (fetch_req),
     .fetch_addr_o          (fetch_addr),
     // From diff stgs
     .fetch_trap_i          (fetch_trap),
-    .lsu_trap_i            (lsu_trap)
+    .lsu_trap_i            (lsu_trap),
+    // Trap output
+    .trap_o                (trap_info)
   );
 
   lsu #(
@@ -238,6 +248,8 @@ module nox
     .lsu_rd_data_i         (lsu_rd_data),
     .lsu_bp_i              (lsu_bp),
     .lsu_bp_data_i         (lsu_bp_data),
+    // Trap signal from execute
+    .trap_active_i         (trap_info.active),
     // To DEC stg
     .wb_dec_o              (wb_dec),
     // To EXE stg

@@ -19,7 +19,9 @@ module register_file
   input           we_i,
   input           re_i,
   output  rdata_t rs1_data_o,
-  output  rdata_t rs2_data_o
+  output  rdata_t rs2_data_o,
+  // NEW: pulso indicando que uma escrita foi efetivada no RF neste ciclo
+  output  logic   rf_write_committed_o
 );
   rdata_t [31:0] reg_file_ff;
   rdata_t next_rs1, rs1_ff;
@@ -55,13 +57,16 @@ module register_file
     `RST_TYPE(rst) begin
       rs1_ff <= `OP_RST_L;
       rs2_ff <= `OP_RST_L;
+      rf_write_committed_o <= 1'b0;
     end
     else begin
+      rf_write_committed_o <= 1'b0;
       if (we_i && (rd_addr_i != 'd0)) begin
         `P_MSG("DEC","Write in the reg_file:")
         `P_VAR("DEC","reg_file[addr]",rd_addr_i)
         `P_VAR("DEC","reg_file[val]",rd_data_i)
         reg_file_ff[rd_addr_i] <= rd_data_i;
+        rf_write_committed_o   <= 1'b1;
       end
       rs1_ff <= next_rs1;
       rs2_ff <= next_rs2;

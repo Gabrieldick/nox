@@ -35,6 +35,7 @@ module csr
   input                     mret_i,
   input                     wfi_i,
   input   s_trap_lsu_info_t lsu_trap_i,
+  input                     failed_to_register_i,
   output  s_trap_info_t     trap_o
 );
   typedef struct packed {
@@ -340,7 +341,7 @@ module csr
         default:        trap_offset = 'h0;
       endcase
     end
-    if (trap_o.active && (irq_i.sw_irq || irq_i.timer_irq || irq_i.ext_irq) && (~traps_can_happen_wo_exec)) begin
+    if (!failed_to_register_i && trap_o.active && (irq_i.sw_irq || irq_i.timer_irq || irq_i.ext_irq) && (~traps_can_happen_wo_exec)) begin
       next_mepc = pc_addr_i;
       mepc_here_4            = 'b1;
     end
