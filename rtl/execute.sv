@@ -33,16 +33,13 @@ module execute
   input   pc_t              lsu_pc_i,
   // IRQs
   input   s_irq_t           irq_i,
-  // DEBUG: condição de stall do decode
-  input   logic             stall_should_fire_dbg_i,
-  input   logic             rf_write_committed_i,
+  input   logic             rf_attempt_to_write_i,
   // To FETCH stg
   output  logic             fetch_req_o,
   output  pc_t              fetch_addr_o,
   // Trap signals
   input   s_trap_info_t     fetch_trap_i,
-  input   s_trap_lsu_info_t lsu_trap_i,
-  output  s_trap_info_t     trap_o
+  input   s_trap_lsu_info_t lsu_trap_i
 );
   typedef enum logic {
     NO_FWD,
@@ -78,7 +75,7 @@ module execute
   endfunction
 
   always_comb begin : failed_to_register_check
-    if (rf_write_committed_i && !ex_mem_wb_o.we_rd && ex_mem_wb_o.rd_addr != 'h0) begin
+    if (rf_attempt_to_write_i && !ex_mem_wb_o.we_rd && ex_mem_wb_o.rd_addr != 'h0) begin
       failed_to_register = 'b1;
     end
     else begin
@@ -269,7 +266,4 @@ module execute
     .failed_to_register_i(failed_to_register),
     .trap_o             (trap_out)
   );
-
-  // Connect internal trap signal to output
-  assign trap_o = trap_out;
 endmodule

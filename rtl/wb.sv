@@ -19,8 +19,6 @@ module wb
   input   rdata_t       lsu_rd_data_i,
   input                 lsu_bp_i,
   input                 lsu_bp_data_i,
-  // Trap signal to disable writes
-  input                 trap_active_i,
   // To DEC stg
   output  s_wb_t        wb_dec_o,
   output  rdata_t       wb_fwd_load_o,
@@ -62,11 +60,6 @@ module wb
       // In case we haven't receive a reply from the slave, let's wait the write
       wb_dec_o.we_rd   = (lsu_bp_data_i || lock_wr_ff) ? 'b0 : ex_mem_wb_i.we_rd;
       wb_dec_o.rd_data = fmt_load(wb_lsu_i, lsu_rd_data_i);
-    end
-    
-    // Force we_rd to 0 when trap is active to prevent register writes
-    if (trap_active_i) begin
-      wb_dec_o.we_rd = 'b0;
     end
   end : mux_for_w_rf
 
